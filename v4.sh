@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # o11-v4 Professional Installer
-# Version: 2.0.4
+# Version: 2.0.5
 # Script by: 3BdALLaH
 
 set -e
@@ -26,31 +26,14 @@ SSL_PORT="443"
 LICENSE_PORT="5454"
 PANEL_PORT="8484"
 
-log() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-    exit 1
-}
-
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-step() {
-    echo -e "${BLUE}[STEP]${NC} $1"
-}
-
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
+log() { echo -e "${GREEN}[INFO]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 
 # Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    error "Please run as root or use sudo"
-fi
+if [ "$EUID" -ne 0 ]; then error "Please run as root or use sudo"; fi
 
 # Display header
 echo -e "${CYAN}"
@@ -68,10 +51,10 @@ select_ports() {
     echo -e "${NC}"
     
     echo "Enter port numbers or press Enter for defaults:"
-    read -rp "Web HTTP port [80]: " input_web
-    read -rp "Web HTTPS port [443]: " input_ssl
-    read -rp "License server port [5454]: " input_license
-    read -rp "Admin Panel port [8484]: " input_panel
+    read -r -p "Web HTTP port [80]: " input_web
+    read -r -p "Web HTTPS port [443]: " input_ssl
+    read -r -p "License server port [5454]: " input_license
+    read -r -p "Admin Panel port [8484]: " input_panel
     
     # Set ports or use defaults
     WEB_PORT=${input_web:-80}
@@ -103,7 +86,7 @@ check_port_availability() {
     
     if command -v ss >/dev/null 2>&1 && ss -tulpn 2>/dev/null | grep -q ":$port "; then
         warning "Port $port ($service) is already in use!"
-        read -rp "Do you want to continue anyway? (y/N): " -n 1 -r
+        read -r -p "Do you want to continue anyway? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             error "Installation cancelled by user"
@@ -131,9 +114,7 @@ systemctl enable docker
 
 step "Downloading o11-v4..."
 wget -q https://senator.pages.dev/v4.zip -O v4.zip
-if [ ! -f v4.zip ]; then
-    error "Failed to download v4.zip"
-fi
+if [ ! -f v4.zip ]; then error "Failed to download v4.zip"; fi
 
 step "Extracting files..."
 unzip -q v4.zip -d o11-v4-install
@@ -142,20 +123,16 @@ cd o11-v4-install/o11-v4-main
 step "Creating fixed start.sh..."
 cat > start.sh << 'EOSTART'
 #!/bin/bash
-# Check if IP_ADDRESS is provided
 if [ -z "$IP_ADDRESS" ]; then
     echo "Error: IP_ADDRESS environment variable is not set"
     exit 1
 fi
 
-# Update IP address in server files
 sed -i "s/const ipAddress = ''/const ipAddress = '$IP_ADDRESS'/g" /home/o11/server.js
 sed -i "s/IP_ADDRESS = \"\"/IP_ADDRESS = \"$IP_ADDRESS\"/g" /home/o11/server.py
 
-# Create directories needed by run.sh
 mkdir -p /home/o11/hls /home/o11/dl
 
-# Start the license server (choose one)
 if [ "$SERVER_TYPE" = "python" ]; then
   pm2 start server.py --name licserver --interpreter python3
 else
@@ -163,9 +140,7 @@ else
 fi
 
 pm2 save
-
 nohup ./run.sh > /dev/null 2>&1 &
-
 pm2 logs
 EOSTART
 
@@ -174,49 +149,20 @@ chmod +x start.sh
 step "Creating fixed Dockerfile..."
 cat > Dockerfile << 'EODOCKER'
 FROM ubuntu:22.04
-
 ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y \
-    curl \
-    sudo \
-    openssl \
-    python3 \
-    python3-pip \
-    ffmpeg \
-    dos2unix \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
+RUN apt-get update && apt-get install -y curl sudo openssl python3 python3-pip ffmpeg dos2unix && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /home/o11
-
 WORKDIR /home/o11
-
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g pm2 \
-    && npm install express
-
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && apt-get install -y nodejs && npm install -g pm2 && npm install express
 RUN pip3 install flask
-
 COPY server.js server.py run.sh o11.cfg o11v4 lic.cr /home/o11/
 COPY start.sh /home/o11/start.sh
-
-RUN chmod +x /home/o11/run.sh
-RUN chmod +x /home/o11/o11v4
-RUN chmod +x /home/o11/lic.cr
-RUN chmod +x /home/o11/start.sh
-
+RUN chmod +x /home/o11/run.sh /home/o11/o11v4 /home/o11/lic.cr /home/o11/start.sh
 RUN dos2unix /home/o11/start.sh /home/o11/run.sh
-
-RUN mkdir -p /home/o11/certs && \
-    openssl req -x509 -newkey rsa:2048 -keyout /home/o11/certs/key.pem -out /home/o11/certs/cert.pem -days 365 -nodes -subj "/CN=localhost"
-
+RUN mkdir -p /home/o11/certs && openssl req -x509 -newkey rsa:2048 -keyout /home/o11/certs/key.pem -out /home/o11/certs/cert.pem -days 365 -nodes -subj "/CN=localhost"
 EXPOSE 80 443 5454 8484
-
 ENV SERVER_TYPE=nodejs
 ENV IP_ADDRESS=""
-
 CMD ["/home/o11/start.sh"]
 EODOCKER
 
@@ -240,16 +186,7 @@ docker stop $CONTAINER_NAME 2>/dev/null || true
 docker rm $CONTAINER_NAME 2>/dev/null || true
 
 step "Starting o11-v4 container with custom ports..."
-docker run -d \
-  -p $WEB_PORT:80 \
-  -p $SSL_PORT:443 \
-  -p $LICENSE_PORT:5454 \
-  -p $PANEL_PORT:8484 \
-  -e IP_ADDRESS="$IP_ADDRESS" \
-  -e SERVER_TYPE="$SERVER_TYPE" \
-  --name "$CONTAINER_NAME" \
-  --restart unless-stopped \
-  "$DOCKER_IMAGE"
+docker run -d -p $WEB_PORT:80 -p $SSL_PORT:443 -p $LICENSE_PORT:5454 -p $PANEL_PORT:8484 -e IP_ADDRESS="$IP_ADDRESS" -e SERVER_TYPE="$SERVER_TYPE" --name "$CONTAINER_NAME" --restart unless-stopped "$DOCKER_IMAGE"
 
 step "Waiting for container to start..."
 sleep 10
@@ -262,7 +199,6 @@ else
     error "Container failed to start. Please check the logs above."
 fi
 
-# Display installation summary
 echo -e "${GREEN}"
 echo "================================================"
 echo "          o11-v4 INSTALLATION COMPLETE         "
@@ -295,4 +231,3 @@ cd ../..
 rm -rf v4.zip o11-v4-install
 
 success "Cleanup completed. Installation finished!"
-EOF

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # o11-v4 Professional Installer
+# Version: 2.0.1
 # Script by: 3BdALLaH
 
 set -e
@@ -62,15 +63,15 @@ echo -e "${NC}"
 # Port selection function
 select_ports() {
     echo -e "${CYAN}"
-    echo "================================================"
     echo "           PORT CONFIGURATION"
     echo "================================================"
     echo -e "${NC}"
     
-    read -rp "Enter Web HTTP port [80]: " input_web
-    read -rp "Enter Web HTTPS port [443]: " input_ssl
-    read -rp "Enter License server port [5454]: " input_license
-    read -rp "Enter Admin Panel port [8484]: " input_panel
+    echo "Enter port numbers or press Enter for defaults:"
+    read -rp "Web HTTP port [80]: " input_web
+    read -rp "Web HTTPS port [443]: " input_ssl
+    read -rp "License server port [5454]: " input_license
+    read -rp "Admin Panel port [8484]: " input_panel
     
     # Set ports or use defaults
     WEB_PORT=${input_web:-80}
@@ -102,7 +103,7 @@ check_port_availability() {
     local port=$1
     local service=$2
     
-    if ss -tulpn | grep -q ":$port "; then
+    if command -v ss >/dev/null 2>&1 && ss -tulpn 2>/dev/null | grep -q ":$port "; then
         warning "Port $port ($service) is already in use!"
         read -rp "Do you want to continue anyway? (y/N): " -n 1 -r
         echo
@@ -232,7 +233,7 @@ if command -v ufw >/dev/null 2>&1 && systemctl is-active --quiet ufw; then
     ufw allow $PANEL_PORT/tcp
     success "Firewall rules added for ports: $WEB_PORT, $SSL_PORT, $LICENSE_PORT, $PANEL_PORT"
 else
-    warning "UFW is not active. Please ensure these ports are open in your firewall:"
+    warning "Please ensure these ports are open in your firewall:"
     warning "HTTP: $WEB_PORT/tcp, HTTPS: $SSL_PORT/tcp, License: $LICENSE_PORT/tcp, Panel: $PANEL_PORT/tcp"
 fi
 

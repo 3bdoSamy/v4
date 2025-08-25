@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # o11-v4 Professional Installer
-# Version: 2.0.0
 # Script by: 3BdALLaH
 
 set -e

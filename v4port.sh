@@ -41,17 +41,24 @@ step "Current port mapping:"
 docker ps --format "table {{.Names}}\t{{.Ports}}" | grep "$CONTAINER_NAME"
 
 echo ""
-echo "Enter new port numbers:"
-read -p "Web HTTP port [80]: " WEB_PORT
-read -p "Web HTTPS port [443]: " SSL_PORT
-read -p "License server port [5454]: " LICENSE_PORT
-read -p "Admin Panel port [8484]: " PANEL_PORT
+echo "Usage: curl -sSL https://raw.githubusercontent.com/3bdoSamy/v4/main/v4port.sh | sudo bash -s -- [HTTP_PORT] [HTTPS_PORT] [LICENSE_PORT] [PANEL_PORT]"
+echo ""
+echo "Example: curl -sSL https://raw.githubusercontent.com/3bdoSamy/v4/main/v4port.sh | sudo bash -s -- 8080 8443 6000 9000"
+echo ""
 
-# Set defaults if empty
-WEB_PORT=${WEB_PORT:-80}
-SSL_PORT=${SSL_PORT:-443}
-LICENSE_PORT=${LICENSE_PORT:-5454}
-PANEL_PORT=${PANEL_PORT:-8484}
+# Get ports from command line arguments or use defaults
+if [ $# -eq 4 ]; then
+    WEB_PORT=$1
+    SSL_PORT=$2
+    LICENSE_PORT=$3
+    PANEL_PORT=$4
+else
+    echo "No ports specified. Using default ports:"
+    WEB_PORT="80"
+    SSL_PORT="443"
+    LICENSE_PORT="5454"
+    PANEL_PORT="8484"
+fi
 
 # Validate ports
 validate_port() {
@@ -66,6 +73,8 @@ validate_port "$WEB_PORT" "HTTP"
 validate_port "$SSL_PORT" "HTTPS"
 validate_port "$LICENSE_PORT" "License"
 validate_port "$PANEL_PORT" "Admin Panel"
+
+step "Using ports: HTTP=$WEB_PORT, HTTPS=$SSL_PORT, License=$LICENSE_PORT, Panel=$PANEL_PORT"
 
 # Get container environment variables
 IP_ADDRESS=$(docker inspect $CONTAINER_NAME --format '{{range .Config.Env}}{{println .}}{{end}}' | grep IP_ADDRESS | cut -d= -f2)
@@ -99,7 +108,7 @@ if command -v ufw >/dev/null 2>&1 && systemctl is-active --quiet ufw; then
     ufw delete allow 80/tcp 2>/dev/null || true
     ufw delete allow 443/tcp 2>/dev/null || true
     ufw delete allow 5454/tcp 2>/dev/null || true
-    ufw delete allow 8484/tcp 2>/dev/null || true
+    ufg delete allow 8484/tcp 2>/dev/null || true
     
     # Add new rules
     ufw allow $WEB_PORT/tcp >/dev/null 2>&1

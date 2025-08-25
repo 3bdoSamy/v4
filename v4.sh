@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # o11-v4 Professional Installer
-# Version: 2.0.1
 # Script by: 3BdALLaH
 
 set -e
@@ -227,11 +226,11 @@ docker build -t $DOCKER_IMAGE .
 
 step "Configuring firewall recommendations..."
 if command -v ufw >/dev/null 2>&1 && systemctl is-active --quiet ufw; then
-    ufw allow $WEB_PORT/tcp
-    ufw allow $SSL_PORT/tcp
-    ufw allow $LICENSE_PORT/tcp
-    ufw allow $PANEL_PORT/tcp
-    success "Firewall rules added for ports: $WEB_PORT, $SSL_PORT, $LICENSE_PORT, $PANEL_PORT"
+    ufw allow $WEB_PORT/tcp >/dev/null 2>&1
+    ufw allow $SSL_PORT/tcp >/dev/null 2>&1
+    ufw allow $LICENSE_PORT/tcp >/dev/null 2>&1
+    ufw allow $PANEL_PORT/tcp >/dev/null 2>&1
+    success "Firewall configured for selected ports"
 else
     warning "Please ensure these ports are open in your firewall:"
     warning "HTTP: $WEB_PORT/tcp, HTTPS: $SSL_PORT/tcp, License: $LICENSE_PORT/tcp, Panel: $PANEL_PORT/tcp"
@@ -242,16 +241,16 @@ docker stop $CONTAINER_NAME 2>/dev/null || true
 docker rm $CONTAINER_NAME 2>/dev/null || true
 
 step "Starting o11-v4 container with custom ports..."
-docker run -d \\
-  -p $WEB_PORT:80 \\
-  -p $SSL_PORT:443 \\
-  -p $LICENSE_PORT:5454 \\
-  -p $PANEL_PORT:8484 \\
-  -e IP_ADDRESS=$IP_ADDRESS \\
-  -e SERVER_TYPE=$SERVER_TYPE \\
-  --name $CONTAINER_NAME \\
-  --restart unless-stopped \\
-  $DOCKER_IMAGE
+docker run -d \
+  -p $WEB_PORT:80 \
+  -p $SSL_PORT:443 \
+  -p $LICENSE_PORT:5454 \
+  -p $PANEL_PORT:8484 \
+  -e IP_ADDRESS="$IP_ADDRESS" \
+  -e SERVER_TYPE="$SERVER_TYPE" \
+  --name "$CONTAINER_NAME" \
+  --restart unless-stopped \
+  "$DOCKER_IMAGE"
 
 step "Waiting for container to start..."
 sleep 10
@@ -261,6 +260,7 @@ if docker ps | grep -q $CONTAINER_NAME; then
 else
     warning "Container might have issues starting. Checking logs..."
     docker logs $CONTAINER_NAME
+    error "Container failed to start. Please check the logs above."
 fi
 
 # Display installation summary

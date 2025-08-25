@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # o11-v4 Professional Installer
+# Version: 2.0.4
 # Script by: 3BdALLaH
 
 set -e
@@ -79,22 +80,20 @@ select_ports() {
     PANEL_PORT=${input_panel:-8484}
     
     # Validate ports
-    validate_port "$WEB_PORT" "HTTP"
-    validate_port "$SSL_PORT" "HTTPS" 
-    validate_port "$LICENSE_PORT" "License"
-    validate_port "$PANEL_PORT" "Admin Panel"
+    if ! [[ "$WEB_PORT" =~ ^[0-9]+$ ]] || [ "$WEB_PORT" -lt 1 ] || [ "$WEB_PORT" -gt 65535 ]; then
+        error "Invalid HTTP port: $WEB_PORT. Must be between 1-65535"
+    fi
+    if ! [[ "$SSL_PORT" =~ ^[0-9]+$ ]] || [ "$SSL_PORT" -lt 1 ] || [ "$SSL_PORT" -gt 65535 ]; then
+        error "Invalid HTTPS port: $SSL_PORT. Must be between 1-65535"
+    fi
+    if ! [[ "$LICENSE_PORT" =~ ^[0-9]+$ ]] || [ "$LICENSE_PORT" -lt 1 ] || [ "$LICENSE_PORT" -gt 65535 ]; then
+        error "Invalid License port: $LICENSE_PORT. Must be between 1-65535"
+    fi
+    if ! [[ "$PANEL_PORT" =~ ^[0-9]+$ ]] || [ "$PANEL_PORT" -lt 1 ] || [ "$PANEL_PORT" -gt 65535 ]; then
+        error "Invalid Panel port: $PANEL_PORT. Must be between 1-65535"
+    fi
     
     success "Ports configured: HTTP=$WEB_PORT, HTTPS=$SSL_PORT, License=$LICENSE_PORT, Panel=$PANEL_PORT"
-}
-
-# Port validation function
-validate_port() {
-    local port=$1
-    local service=$2
-    
-    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
-        error "Invalid $service port: $port. Must be between 1-65535"
-    fi
 }
 
 # Check port availability
@@ -141,7 +140,7 @@ unzip -q v4.zip -d o11-v4-install
 cd o11-v4-install/o11-v4-main
 
 step "Creating fixed start.sh..."
-cat > start.sh << 'EOF'
+cat > start.sh << 'EOSTART'
 #!/bin/bash
 # Check if IP_ADDRESS is provided
 if [ -z "$IP_ADDRESS" ]; then
@@ -168,34 +167,34 @@ pm2 save
 nohup ./run.sh > /dev/null 2>&1 &
 
 pm2 logs
-EOF
+EOSTART
 
 chmod +x start.sh
 
 step "Creating fixed Dockerfile..."
-cat > Dockerfile << EOF
+cat > Dockerfile << 'EODOCKER'
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \\
-    curl \\
-    sudo \\
-    openssl \\
-    python3 \\
-    python3-pip \\
-    ffmpeg \\
-    dos2unix \\
-    && apt-get clean \\
+RUN apt-get update && apt-get install -y \
+    curl \
+    sudo \
+    openssl \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    dos2unix \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /home/o11
 
 WORKDIR /home/o11
 
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \\
-    && apt-get install -y nodejs \\
-    && npm install -g pm2 \\
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g pm2 \
     && npm install express
 
 RUN pip3 install flask
@@ -210,7 +209,7 @@ RUN chmod +x /home/o11/start.sh
 
 RUN dos2unix /home/o11/start.sh /home/o11/run.sh
 
-RUN mkdir -p /home/o11/certs && \\
+RUN mkdir -p /home/o11/certs && \
     openssl req -x509 -newkey rsa:2048 -keyout /home/o11/certs/key.pem -out /home/o11/certs/cert.pem -days 365 -nodes -subj "/CN=localhost"
 
 EXPOSE 80 443 5454 8484
@@ -219,7 +218,7 @@ ENV SERVER_TYPE=nodejs
 ENV IP_ADDRESS=""
 
 CMD ["/home/o11/start.sh"]
-EOF
+EODOCKER
 
 step "Building Docker image..."
 docker build -t $DOCKER_IMAGE .
@@ -296,3 +295,4 @@ cd ../..
 rm -rf v4.zip o11-v4-install
 
 success "Cleanup completed. Installation finished!"
+EOF

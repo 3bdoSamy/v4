@@ -1,4 +1,3 @@
-# Create a temporary uninstall script that works
 cat > /tmp/quick-uninstall.sh << 'EOF'
 #!/bin/bash
 echo "================================================"

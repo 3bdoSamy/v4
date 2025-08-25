@@ -1,3 +1,4 @@
+cat > uninstall.sh << 'EOF'
 #!/bin/bash
 
 # o11-v4 Uninstaller
@@ -62,3 +63,4 @@ echo "       o11-v4 successfully uninstalled"
 echo "           Script by: 3BdALLaH"
 echo "================================================"
 echo -e "${NC}"
+EOF

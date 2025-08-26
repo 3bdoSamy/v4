@@ -41,9 +41,9 @@ step "Current port mapping:"
 docker ps --format "table {{.Names}}\t{{.Ports}}" | grep "$CONTAINER_NAME"
 
 echo ""
-echo "Usage: curl -sSL https://raw.githubusercontent.com/3bdoSamy/v4/main/v4port.sh | sudo bash -s -- [HTTP_PORT] [HTTPS_PORT] [LICENSE_PORT] [PANEL_PORT]"
+echo "Usage: curl -sSL https://raw.githubusercontent.com/3bdoSamy/v4/main/port-change | sudo bash -s -- [HTTP_PORT] [HTTPS_PORT] [LICENSE_PORT] [PANEL_PORT]"
 echo ""
-echo "Example: curl -sSL https://raw.githubusercontent.com/3bdoSamy/v4/main/v4port.sh | sudo bash -s -- 8080 8443 6000 9000"
+echo "Example: curl -sSL https://raw.githubusercontent.com/3bdoSamy/v4/main/port-change | sudo bash -s -- 8080 8443 6000 9000"
 echo ""
 
 # Get ports from command line arguments or use defaults
@@ -137,5 +137,5 @@ fi
 
 echo ""
 echo -e "${CYAN}================================================"
-echo "Port change completed by 3BdALLaH"
+echo "O11 V4 Port change completed, Script by 3BdALLaH"
 echo -e "================================================${NC}"

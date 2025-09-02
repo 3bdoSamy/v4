@@ -97,14 +97,6 @@ EODOCKER
 step "Building Docker image..."
 docker build -t $DOCKER_IMAGE .
 
-step "Configuring firewall..."
-if command -v ufw >/dev/null 2>&1 && systemctl is-active --quiet ufw; then
-    ufw allow 80/tcp >/dev/null 2>&1
-    ufw allow 443/tcp >/dev/null 2>&1
-    ufw allow 5454/tcp >/dev/null 2>&1
-    ufw allow 8484/tcp >/dev/null 2>&1
-    success "Firewall configured"
-fi
 
 step "Removing existing container if any..."
 docker stop $CONTAINER_NAME 2>/dev/null || true

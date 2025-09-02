@@ -102,21 +102,6 @@ docker run -d \
   --restart unless-stopped \
   "$DOCKER_IMAGE"
 
-step "Updating firewall rules..."
-if command -v ufw >/dev/null 2>&1 && systemctl is-active --quiet ufw; then
-    # Remove old rules (approximate)
-    ufw delete allow 80/tcp 2>/dev/null || true
-    ufw delete allow 443/tcp 2>/dev/null || true
-    ufw delete allow 5454/tcp 2>/dev/null || true
-    ufg delete allow 8484/tcp 2>/dev/null || true
-    
-    # Add new rules
-    ufw allow $WEB_PORT/tcp >/dev/null 2>&1
-    ufw allow $SSL_PORT/tcp >/dev/null 2>&1
-    ufw allow $LICENSE_PORT/tcp >/dev/null 2>&1
-    ufw allow $PANEL_PORT/tcp >/dev/null 2>&1
-    success "Firewall updated for new ports"
-fi
 
 step "Waiting for container to start..."
 sleep 5

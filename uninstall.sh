@@ -56,14 +56,6 @@ rm -rf /home/o11 2>/dev/null || true
 rm -rf /tmp/o11-v4-install 2>/dev/null || true
 rm -f /tmp/v4.zip 2>/dev/null || true
 
-echo "Removing firewall rules..."
-if command -v ufw >/dev/null 2>&1 && systemctl is-active --quiet ufw; then
-    ufw delete allow 80/tcp 2>/dev/null || true
-    ufw delete allow 443/tcp 2>/dev/null || true
-    ufw delete allow 5454/tcp 2>/dev/null || true
-    ufw delete allow 8484/tcp 2>/dev/null || true
-    echo "Firewall rules removed."
-fi
 
 echo -e "${GREEN}"
 echo "================================================"

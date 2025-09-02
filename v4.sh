@@ -38,6 +38,34 @@ IP_ADDRESS=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
 DOCKER_IMAGE="o11-v4"
 CONTAINER_NAME="o11"
 
+# Ask for installation type
+echo -e "${YELLOW}"
+echo "Select installation type:"
+echo "1) Node.js (Default)"
+echo "2) Python"
+read -p "Enter your choice [1-2]: " -r INSTALL_CHOICE
+echo -e "${NC}"
+
+# Set default if empty
+if [ -z "$INSTALL_CHOICE" ]; then
+    INSTALL_CHOICE="1"
+fi
+
+case $INSTALL_CHOICE in
+    1)
+        SERVER_TYPE="nodejs"
+        step "Selected Node.js installation"
+        ;;
+    2)
+        SERVER_TYPE="python"
+        step "Selected Python installation"
+        ;;
+    *)
+        SERVER_TYPE="nodejs"
+        warning "Invalid choice, defaulting to Node.js"
+        ;;
+esac
+
 step "Using default ports: HTTP=80, HTTPS=443, License=5454, Panel=8484"
 
 step "Updating system and installing dependencies..."
@@ -63,11 +91,20 @@ if [ -z "$IP_ADDRESS" ]; then
     echo "Error: IP_ADDRESS environment variable is not set"
     exit 1
 fi
-sed -i "s/const ipAddress = ''/const ipAddress = '$IP_ADDRESS'/g" /home/o11/server.js
-sed -i "s/IP_ADDRESS = \"\"/IP_ADDRESS = \"$IP_ADDRESS\"/g" /home/o11/server.py
-mkdir -p /home/o11/hls /home/o11/dl
-pm2 start server.js --name licserver --silent
-pm2 save
+
+# Update configuration based on server type
+if [ "$SERVER_TYPE" = "nodejs" ]; then
+    sed -i "s/const ipAddress = ''/const ipAddress = '$IP_ADDRESS'/g" /home/o11/server.js
+    mkdir -p /home/o11/hls /home/o11/dl
+    pm2 start server.js --name licserver --silent
+    pm2 save
+elif [ "$SERVER_TYPE" = "python" ]; then
+    sed -i "s/IP_ADDRESS = \"\"/IP_ADDRESS = \"$IP_ADDRESS\"/g" /home/o11/server.py
+    mkdir -p /home/o11/hls /home/o11/dl
+    pm2 start server.py --name licserver --interpreter python3 --silent
+    pm2 save
+fi
+
 nohup ./run.sh > /dev/null 2>&1 &
 pm2 logs
 EOSTART
@@ -97,19 +134,18 @@ EODOCKER
 step "Building Docker image..."
 docker build -t $DOCKER_IMAGE .
 
-
 step "Removing existing container if any..."
 docker stop $CONTAINER_NAME 2>/dev/null || true
 docker rm $CONTAINER_NAME 2>/dev/null || true
 
-step "Starting o11-v4 container..."
-docker run -d -p 80:80 -p 443:443 -p 5454:5454 -p 8484:8484 -e IP_ADDRESS="$IP_ADDRESS" -e SERVER_TYPE="nodejs" --name "$CONTAINER_NAME" --restart unless-stopped "$DOCKER_IMAGE"
+step "Starting o11-v4 container with $SERVER_TYPE..."
+docker run -d -p 80:80 -p 443:443 -p 5454:5454 -p 8484:8484 -e IP_ADDRESS="$IP_ADDRESS" -e SERVER_TYPE="$SERVER_TYPE" --name "$CONTAINER_NAME" --restart unless-stopped "$DOCKER_IMAGE"
 
 step "Waiting for container to start..."
 sleep 10
 
 if docker ps | grep -q $CONTAINER_NAME; then
-    success "Container is running successfully!"
+    success "Container is running successfully with $SERVER_TYPE!"
 else
     warning "Container might have issues starting. Checking logs..."
     docker logs $CONTAINER_NAME
@@ -122,6 +158,7 @@ echo "          o11-v4 INSTALLATION COMPLETE         "
 echo "================================================"
 echo -e "${NC}"
 echo "IP Address: $IP_ADDRESS"
+echo "Server Type: $SERVER_TYPE"
 echo "Web HTTP: http://$IP_ADDRESS:80"
 echo "Web HTTPS: https://$IP_ADDRESS:443"
 echo "Admin Panel: http://$IP_ADDRESS:8484"
